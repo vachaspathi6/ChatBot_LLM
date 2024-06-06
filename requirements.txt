@@ -1,6 +1,6 @@
 streamlit
 boto3
-openai
+openai==0.27.8
 google-generativeai
 ipython
 streamlit_chat
