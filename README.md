@@ -12,7 +12,7 @@ This repository contains the implementation of a chatbot that utilizes four diff
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/ChatBot_LLM.git
+    git clone https://github.com/your_username/ChatBot_LLM.git
     cd ChatBot_LLM
     ```
 
