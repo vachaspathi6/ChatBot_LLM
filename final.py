@@ -126,12 +126,8 @@ for message in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(message["content"])
 
-# Clear history button and input field for user's message side by side
-col1, col2 = st.columns([17, 5])
-if col2.button("Clear Chat History"):
-    st.session_state.chat_history = []
-
-input_text = col1.chat_input("Ask your question here:")
+# Input field for user's message at the bottom of the page
+input_text = st.chat_input("Ask your question here:")
 
 if input_text:
     if api_key:
@@ -177,4 +173,3 @@ if input_text:
         st.sidebar.write(f"- **Output Tokens:** {output_tokens}")
     else:
         st.sidebar.error("⚠️ Please enter your API key to proceed.")
-        
