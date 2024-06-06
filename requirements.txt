@@ -1,0 +1,6 @@
+streamlit
+boto3
+openai
+google-generativeai
+ipython
+streamlit_chat
