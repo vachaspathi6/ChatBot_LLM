@@ -16,7 +16,10 @@ This repository contains the implementation of a chatbot that utilizes four diff
     cd ChatBot_LLM
     ```
 
-2. Install the required Python packages
+2. Install the required Python packages:
+    ```sh
+    pip install -r requirements.txt
+    ```
 
 3. Run the Streamlit application:
     ```sh
