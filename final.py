@@ -50,12 +50,18 @@ def get_chatgpt_response(api_key, question):
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": question}
         ],
-         stream=True,
-            temperature=0.7,   # Set temperature internally
-            top_p=0.9,         # Set top_p internally
-            max_tokens=1000     # Set max_tokens internally
+        stream=True,
+        temperature=0.7,   # Set temperature internally
+        top_p=0.9,         # Set top_p internally
+        max_tokens=1000     # Set max_tokens internally
     )
-    return response.choices[0].delta.get("content", "")
+
+    full_response = ""
+    for response in response:
+        token_text = response.choices[0].delta.get("content", "")
+        full_response += token_text
+
+    return full_response
 
 # Function to load Gemini model and get response
 def get_gemini_response(api_key, question):
