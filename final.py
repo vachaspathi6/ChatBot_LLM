@@ -112,7 +112,7 @@ elif model_choice == "AWS":
     aws_access_key_id = st.sidebar.text_input("🔑 AWS Access Key Id", placeholder="access key", type="password")
     api_key = st.sidebar.text_input("🗝️ AWS Secret Access Key", placeholder="secret", type="password")   
 else:
-    api_base = st.sidebar.text_input("🌐 Amazon API Base URL", placeholder="https://<name>.openai.azure.com/")
+    api_base = st.sidebar.text_input("🌐 Azure API Base URL", placeholder="https://<name>.openai.azure.com/")
     api_version = st.sidebar.text_input("📛 API Version", "2023-03-15-preview")
     api_key = st.sidebar.text_input("🔑 API Key", type="password")
 
