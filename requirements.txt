@@ -4,3 +4,4 @@ openai
 google-genai
 ipython
 streamlit_chat
+deepeval
