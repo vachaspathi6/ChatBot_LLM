@@ -9,7 +9,7 @@ from deepeval import evaluate
 from deepeval.metrics import AnswerRelevancyMetric, BiasMetric, ToxicityMetric, ToolCorrectnessMetric
 from deepeval.test_case import LLMTestCase, ToolCall
 
-os.environ["OPENAI_API_KEY"] = "Place Your OpenAI API KEY"
+os.environ["OPENAI_API_KEY"] = ""
 
 def get_model_response(customer_input, aws_access_key_id, aws_secret_access_key, boto_session):
     if not aws_access_key_id and not aws_secret_access_key:
