@@ -1,11 +1,15 @@
 import streamlit as st
 import time
 import boto3
-import openai
-import google.generativeai as genai
-from IPython.display import Markdown
-from streamlit_chat import message
+from openai import OpenAI, AzureOpenAI
+from google import genai
 import json
+import os
+from deepeval import evaluate
+from deepeval.metrics import AnswerRelevancyMetric, BiasMetric, ToxicityMetric, ToolCorrectnessMetric
+from deepeval.test_case import LLMTestCase, ToolCall
+
+os.environ["OPENAI_API_KEY"] = "Place Your OpenAI API KEY"
 
 def get_model_response(customer_input, aws_access_key_id, aws_secret_access_key, boto_session):
     if not aws_access_key_id and not aws_secret_access_key:
@@ -43,49 +47,39 @@ def get_model_response(customer_input, aws_access_key_id, aws_secret_access_key,
 
 # Function to load OpenAI model and get response
 def get_chatgpt_response(api_key, question):
-    openai.api_key = api_key
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": question}
-        ],
-        stream=True,
-        temperature=0.7,   # Set temperature internally
-        top_p=0.9,         # Set top_p internally
-        max_tokens=1000     # Set max_tokens internally
+    client = OpenAI(api_key=api_key)
+    response = client.responses.create(
+        model="gpt-4o",
+        input=question
     )
-
-    full_response = ""
-    for response in response:
-        token_text = response.choices[0].delta.get("content", "")
-        full_response += token_text
-
-    return full_response
+    return response.output_text
 
 # Function to load Gemini model and get response
 def get_gemini_response(api_key, question):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-pro')
-    response = model.generate_content(question)
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=question
+    )
     return response.text
 
 # Function to load Azure OpenAI GPT-3.5 Turbo model and get response
 def get_azure_gpt_response(api_base, api_version, api_key, question):
-    openai.api_type = "azure"
-    openai.api_base = api_base
-    openai.api_version = api_version
-    openai.api_key = api_key
+    client = AzureOpenAI(
+        api_key=api_key,
+        api_version=api_version,
+        azure_endpoint=api_base,
+    )
 
-    response = openai.ChatCompletion.create(
-        engine="gpt-35-turbo",
-        temperature=0.7,
-        max_tokens=2000,
-        top_p=0.95,
+    response = client.chat.completions.create(
+        model="gpt-35-turbo",
         messages=[
             {"role": "system", "content": "How can I help you?"},
             {"role": "user", "content": question}
-        ]
+        ],
+        temperature=0.7,
+        max_tokens=1000,
+        top_p=0.9
     )
 
     return response.choices[0].message.content
@@ -110,10 +104,10 @@ elif model_choice == "GPT-4.0":
     api_key = st.sidebar.text_input("🔑 Chat-GPT API Key", type="password")
 elif model_choice == "AWS":
     aws_access_key_id = st.sidebar.text_input("🔑 AWS Access Key Id", placeholder="access key", type="password")
-    api_key = st.sidebar.text_input("🗝️ AWS Secret Access Key", placeholder="secret", type="password")   
+    api_key = st.sidebar.text_input("🔑 AWS Secret Access Key", placeholder="secret", type="password")   
 else:
-    api_base = st.sidebar.text_input("🌐 Azure API Base URL", placeholder="https://<name>.openai.azure.com/")
-    api_version = st.sidebar.text_input("📛 API Version", "2023-03-15-preview")
+    api_base = st.sidebar.text_input("🔑 Amazon API Base URL", placeholder="https://<name>.openai.azure.com/")
+    api_version = st.sidebar.text_input("🔑 API Version", "2023-03-15-preview")
     api_key = st.sidebar.text_input("🔑 API Key", type="password")
 
 # Initialize chat session in Streamlit if not already present
@@ -126,8 +120,12 @@ for message in st.session_state.chat_history:
     with st.chat_message(role):
         st.markdown(message["content"])
 
-# Input field for user's message at the bottom of the page
-input_text = st.chat_input("Ask your question here:")
+# Clear history button and input field for user's message side by side
+col1, col2 = st.columns([7, 3])
+if col2.button("Clear Chat History"):
+    st.session_state.chat_history = []
+
+input_text = col1.chat_input("Ask your question here:")
 
 if input_text:
     if api_key:
@@ -161,6 +159,12 @@ if input_text:
         output_tokens = len(assistant_response.split())
         throughput = output_tokens / latency
 
+        test_case = LLMTestCase(input=input_text, actual_output=response)
+        relevancy_score = evaluate(test_cases=[test_case], metrics=[AnswerRelevancyMetric(threshold=0.7)])
+        bias_score = evaluate(test_cases=[test_case], metrics=[BiasMetric(threshold=0.5)])
+        toxicity_score = evaluate(test_cases=[test_case], metrics=[ToxicityMetric(threshold=0.5)])
+        correctness_score = evaluate(test_cases=[LLMTestCase(input=input_text, actual_output=response, tools_called=[ToolCall(name="WebSearch"), ToolCall(name="ToolQuery")], expected_tools=[ToolCall(name="WebSearch")],)], metrics=[ToolCorrectnessMetric(threshold=0.5)])
+
         # Display the AI's response
         with st.chat_message("assistant"):
             st.markdown(assistant_response)
@@ -171,5 +175,10 @@ if input_text:
         st.sidebar.write(f"- **Latency:** {latency:.6f} seconds")
         st.sidebar.write(f"- **Input Tokens:** {input_tokens}")
         st.sidebar.write(f"- **Output Tokens:** {output_tokens}")
+        st.sidebar.write(f"- **Relevancy Score:** {relevancy_score.test_results[0].metrics_data[0].score}")
+        st.sidebar.write(f"- **Bias Score:** {bias_score.test_results[0].metrics_data[0].score}")
+        st.sidebar.write(f"- **Toxicity Score:** {toxicity_score.test_results[0].metrics_data[0].score}")
+        st.sidebar.write(f"- **Correctness Score:** {correctness_score.test_results[0].metrics_data[0].score}")
+
     else:
         st.sidebar.error("⚠️ Please enter your API key to proceed.")
