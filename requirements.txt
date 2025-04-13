@@ -1,6 +1,6 @@
 streamlit
 boto3
 openai
-google
+google-genai
 ipython
 streamlit_chat
